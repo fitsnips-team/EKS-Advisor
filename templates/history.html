@@ -1,0 +1,427 @@
+{% extends "base.html" %}
+
+{% block title %}History & Analytics - EKS Advisor{% endblock %}
+
+{% block content %}
+<!-- Enhanced Cluster Header -->
+<div class="row mb-4">
+    <div class="col">
+        <div class="d-flex align-items-center mb-3">
+            <div class="me-3">
+                <i class="bi bi-graph-up text-primary" style="font-size: 2.5rem;"></i>
+            </div>
+            <div>
+                <h1 class="h2 mb-1">History & Analytics</h1>
+                <div class="cluster-name-badge">
+                    <span class="badge bg-primary fs-5 px-3 py-2">
+                        <i class="bi bi-kubernetes me-2"></i>
+                        {{ cluster_name }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        <p class="text-muted mb-0">
+            <i class="bi bi-clock"></i> Last updated: {{ last_update }}
+        </p>
+    </div>
+</div>
+
+<!-- History Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-database-fill text-info" style="font-size: 2rem;"></i>
+                <h4 class="text-info mt-2">{{ history_summary['database_stats']['total_records'] if history_summary and history_summary.get('database_stats') else 0 }}</h4>
+                <p class="text-muted mb-0">Total Records</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-hdd-stack text-success" style="font-size: 2rem;"></i>
+                <h4 class="text-success mt-2">{{ history_summary['database_stats']['unique_clusters'] if history_summary and history_summary.get('database_stats') else 0 }}</h4>
+                <p class="text-muted mb-0">Clusters Tracked</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-calendar-range text-warning" style="font-size: 2rem;"></i>
+                <h4 class="text-warning mt-2">{{ history_summary.get('data_range_days', 0) if history_summary else 0 }}</h4>
+                <p class="text-muted mb-0">Days of Data</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-activity text-primary" style="font-size: 2rem;"></i>
+                <h4 class="text-primary mt-2">
+                    {% if history_summary and history_summary.get('tracking_status') == 'active' %}Active{% else %}No Data{% endif %}
+                </h4>
+                <p class="text-muted mb-0">Tracking Status</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section -->
+{% if trend_data and trend_data.data_points > 0 %}
+<div class="row mb-4">
+    <!-- Score Trends Chart -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-graph-up-arrow"></i>
+                    Score Trends Over Time
+                </h5>
+                <small class="text-muted">Health, Security, and Performance scores for the last 30 days</small>
+            </div>
+            <div class="card-body">
+                <canvas id="scoresChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Current Scores Gauge -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-speedometer2"></i>
+                    Current Scores
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Health</span>
+                        <span class="fw-bold text-{% if trend_data.get('latest_scores', {}).get('health', 0) >= 80 %}success{% elif trend_data.get('latest_scores', {}).get('health', 0) >= 60 %}warning{% else %}danger{% endif %}">
+                            {{ trend_data.get('latest_scores', {}).get('health', 0) }}%
+                        </span>
+                    </div>
+                    <div class="progress mb-2">
+                        <div class="progress-bar bg-{% if trend_data.get('latest_scores', {}).get('health', 0) >= 80 %}success{% elif trend_data.get('latest_scores', {}).get('health', 0) >= 60 %}warning{% else %}danger{% endif %}" 
+                             style="width: {{ trend_data.get('latest_scores', {}).get('health', 0) }}%"></div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Security</span>
+                        <span class="fw-bold text-{% if trend_data.latest_scores.security >= 80 %}success{% elif trend_data.latest_scores.security >= 60 %}warning{% else %}danger{% endif %}">
+                            {{ trend_data.latest_scores.security }}%
+                        </span>
+                    </div>
+                    <div class="progress mb-2">
+                        <div class="progress-bar bg-{% if trend_data.latest_scores.security >= 80 %}success{% elif trend_data.latest_scores.security >= 60 %}warning{% else %}danger{% endif %}" 
+                             style="width: {{ trend_data.latest_scores.security }}%"></div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Performance</span>
+                        <span class="fw-bold text-{% if trend_data.latest_scores.performance >= 80 %}success{% elif trend_data.latest_scores.performance >= 60 %}warning{% else %}danger{% endif %}">
+                            {{ trend_data.latest_scores.performance }}%
+                        </span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-{% if trend_data.latest_scores.performance >= 80 %}success{% elif trend_data.latest_scores.performance >= 60 %}warning{% else %}danger{% endif %}" 
+                             style="width: {{ trend_data.latest_scores.performance }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Event Counts Chart -->
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-bar-chart"></i>
+                    Event Volume Trends
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="eventsChart" width="400" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Trend Indicators -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-trending-up"></i>
+                    Trend Analysis
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="trend-indicator">
+                            <i class="bi bi-{% if trend_data.trends.health == 'improving' %}arrow-up-circle text-success{% elif trend_data.trends.health == 'declining' %}arrow-down-circle text-danger{% else %}dash-circle text-secondary{% endif %}" style="font-size: 2rem;"></i>
+                            <h6 class="mt-2">Health</h6>
+                            <p class="text-muted small text-capitalize">{{ trend_data.trends.health }}</p>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="trend-indicator">
+                            <i class="bi bi-{% if trend_data.trends.security == 'improving' %}arrow-up-circle text-success{% elif trend_data.trends.security == 'declining' %}arrow-down-circle text-danger{% else %}dash-circle text-secondary{% endif %}" style="font-size: 2rem;"></i>
+                            <h6 class="mt-2">Security</h6>
+                            <p class="text-muted small text-capitalize">{{ trend_data.trends.security }}</p>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="trend-indicator">
+                            <i class="bi bi-{% if trend_data.trends.performance == 'improving' %}arrow-up-circle text-success{% elif trend_data.trends.performance == 'declining' %}arrow-down-circle text-danger{% else %}dash-circle text-secondary{% endif %}" style="font-size: 2rem;"></i>
+                            <h6 class="mt-2">Performance</h6>
+                            <p class="text-muted small text-capitalize">{{ trend_data.trends.performance }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="row">
+                    <div class="col-6">
+                        <p class="mb-1"><strong>Data Points:</strong></p>
+                        <p class="text-muted">{{ trend_data.data_points }} measurements</p>
+                    </div>
+                    <div class="col-6">
+                        <p class="mb-1"><strong>Time Range:</strong></p>
+                        <p class="text-muted">{{ trend_data.days_back }} days</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="row mb-4">
+    <div class="col">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-graph-up text-muted" style="font-size: 4rem;"></i>
+                <h4 class="text-muted mt-3">No Historical Data Available</h4>
+                <p class="text-muted">Start running analyses to see trends and charts here.</p>
+                <a href="/" class="btn btn-primary">
+                    <i class="bi bi-play-circle"></i>
+                    Run Analysis
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Timeline -->
+{% if timeline_data %}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-clock-history"></i>
+                    Recent Analysis Timeline
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    {% for record in timeline_data[:10] %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-{% if record.status == 'excellent' %}success{% elif record.status == 'good' %}primary{% elif record.status == 'warning' %}warning{% else %}danger{% endif %}"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">
+                                Analysis Complete
+                                <span class="badge bg-{% if record.status == 'excellent' %}success{% elif record.status == 'good' %}primary{% elif record.status == 'warning' %}warning{% else %}danger{% endif %} ms-2">
+                                    {{ record.status|title }}
+                                </span>
+                            </h6>
+                            <p class="text-muted mb-1">
+                                <small>
+                                    {{ record.days_ago }} day{{ 's' if record.days_ago != 1 else '' }} ago •
+                                    Overall Score: {{ record.overall_score }}% •
+                                    {{ record.total_events }} events analyzed
+                                </small>
+                            </p>
+                            {% if record.has_critical_issues %}
+                            <span class="badge bg-danger">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                Critical Issues Found
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                {% if timeline_data|length > 10 %}
+                <div class="text-center mt-3">
+                    <p class="text-muted">Showing 10 most recent entries ({{ timeline_data|length }} total)</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e9ecef;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -24px;
+    top: 5px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #e9ecef;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.trend-indicator {
+    padding: 10px;
+    transition: transform 0.2s;
+}
+
+.trend-indicator:hover {
+    transform: translateY(-2px);
+}
+</style>
+
+{% if trend_data and trend_data.data_points > 0 %}
+<script>
+// Scores Chart
+const scoresCtx = document.getElementById('scoresChart').getContext('2d');
+const scoresChart = new Chart(scoresCtx, {
+    type: 'line',
+    data: {
+        labels: {{ trend_data.timestamps | map('slice', 5, 10) | list | tojson }},
+        datasets: [{
+            label: 'Health Score',
+            data: {{ trend_data.health_scores | tojson }},
+            borderColor: '#28a745',
+            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+            tension: 0.3,
+            fill: false
+        }, {
+            label: 'Security Score',
+            data: {{ trend_data.security_scores | tojson }},
+            borderColor: '#dc3545',
+            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+            tension: 0.3,
+            fill: false
+        }, {
+            label: 'Performance Score',
+            data: {{ trend_data.performance_scores | tojson }},
+            borderColor: '#007bff',
+            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+            tension: 0.3,
+            fill: false
+        }]
+    },
+    options: {
+        responsive: true,
+        interaction: {
+            mode: 'index',
+            intersect: false,
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                    callback: function(value) {
+                        return value + '%';
+                    }
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                position: 'top',
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.dataset.label + ': ' + context.parsed.y + '%';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Events Chart
+const eventsCtx = document.getElementById('eventsChart').getContext('2d');
+const eventsChart = new Chart(eventsCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ trend_data.timestamps | map('slice', 5, 10) | list | tojson }},
+        datasets: [{
+            label: 'Total Events',
+            data: {{ trend_data.event_counts | tojson }},
+            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        },
+        plugins: {
+            legend: {
+                position: 'top',
+            }
+        }
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Error - EKS Advisor{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Connection Error
+                </h5>
+            </div>
+            <div class="card-body">
+                <h6 class="card-title">{{ error_type }}</h6>
+                <p class="card-text">{{ error }}</p>
+                
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-info-circle"></i> Troubleshooting Steps:</h6>
+                    <ol class="mb-0">
+                        <li><strong>Check Kubernetes Connection:</strong>
+                            <pre class="mt-2 mb-2"><code>kubectl get nodes</code></pre>
+                        </li>
+                        <li><strong>Verify Kubeconfig:</strong>
+                            <pre class="mt-2 mb-2"><code>kubectl config current-context</code></pre>
+                        </li>
+                        <li><strong>Check Ollama Service:</strong>
+                            <pre class="mt-2 mb-2"><code>curl http://127.0.0.1:11434/api/tags</code></pre>
+                        </li>
+                        <li><strong>Restart Services if needed:</strong>
+                            <pre class="mt-2 mb-2"><code>ollama serve</code></pre>
+                        </li>
+                    </ol>
+                </div>
+                
+                <div class="text-center">
+                    <button class="btn btn-primary" onclick="refreshData(true)">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        Retry Connection
+                    </button>
+                    <a href="/" class="btn btn-outline-secondary">
+                        <i class="bi bi-house"></i>
+                        Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center mt-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-gear"></i>
+                    System Status
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Environment Check</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-check-circle text-success"></i> FastAPI Web Server</li>
+                            <li><i class="bi bi-question-circle text-warning"></i> Kubernetes API</li>
+                            <li><i class="bi bi-question-circle text-warning"></i> Ollama LLM Service</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Quick Commands</h6>
+                        <small>
+                            <code>uv run python setup_ollama.py</code><br>
+                            <code>uv run python llm_config.py</code><br>
+                            <code>uv run python main_mvc.py --mode health</code>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}Events - EKS Advisor{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="h2 mb-0">
+            <i class="bi bi-list-ul"></i>
+            Cluster Events
+        </h1>
+        <p class="text-muted mb-0">
+            {{ cluster_name }} • {{ total_events }} events • Last updated: {{ last_update }}
+        </p>
+    </div>
+</div>
+
+{% if events %}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-table"></i>
+                    Recent Events (Last 24 Hours)
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table id="eventsTable" class="table table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th class="sortable" data-column="0" style="cursor: pointer;">
+                                    Time 
+                                    <i class="bi bi-arrow-down-up sort-icon"></i>
+                                </th>
+                                <th class="sortable" data-column="1" style="cursor: pointer;">
+                                    Issue Type 
+                                    <i class="bi bi-arrow-down-up sort-icon"></i>
+                                </th>
+                                <th class="sortable" data-column="2" style="cursor: pointer;">
+                                    Severity 
+                                    <i class="bi bi-arrow-down-up sort-icon"></i>
+                                </th>
+                                <th class="sortable" data-column="3" style="cursor: pointer;">
+                                    Resource 
+                                    <i class="bi bi-arrow-down-up sort-icon"></i>
+                                </th>
+                                <th class="sortable" data-column="4" style="cursor: pointer;">
+                                    Count 
+                                    <i class="bi bi-arrow-down-up sort-icon"></i>
+                                </th>
+                                <th class="sortable" data-column="5" style="cursor: pointer;">
+                                    Message 
+                                    <i class="bi bi-arrow-down-up sort-icon"></i>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for event in events %}
+                            <tr>
+                                <td data-sort="{{ event.timestamp }}">
+                                    <small>{{ event.timestamp }}</small>
+                                </td>
+                                <td data-sort="{{ event.friendly_reason }}">
+                                    <span class="badge bg-light text-dark" title="{{ event.original_reason }}">
+                                        {{ event.friendly_reason }}
+                                    </span>
+                                </td>
+                                <td data-sort="{{ event.severity }}">
+                                    <span class="badge bg-{{ event.severity_color }}">
+                                        {{ event.severity.upper() }}
+                                    </span>
+                                </td>
+                                <td data-sort="{{ event.object_kind }}/{{ event.object_name }}">
+                                    <div>
+                                        <strong>{{ event.object_kind }}/{{ event.object_name }}</strong>
+                                        {% if event.namespace != 'N/A' %}
+                                            <br><small class="text-muted">{{ event.namespace }}</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td data-sort="{{ event.count }}">
+                                    <span class="badge bg-secondary">{{ event.count }}</span>
+                                </td>
+                                <td data-sort="{{ event.message }}">
+                                    <div title="{{ event.full_message }}">
+                                        {{ event.message }}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="row">
+    <div class="col">
+        <div class="alert alert-info text-center">
+            <h4><i class="bi bi-info-circle"></i> No Events Found</h4>
+            <p class="mb-0">No events were found in the last 24 hours, or cluster connection is unavailable.</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Navigation -->
+<div class="row mt-4">
+    <div class="col text-center">
+        <a href="/" class="btn btn-primary me-2">
+            <i class="bi bi-speedometer2"></i>
+            Back to Dashboard
+        </a>
+        <a href="/analysis" class="btn btn-success me-2">
+            <i class="bi bi-brain"></i>
+            View Analysis
+        </a>
+        <button class="btn btn-outline-secondary" onclick="refreshData(true)">
+            <i class="bi bi-arrow-clockwise"></i>
+            Refresh Events
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.sortable:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.sort-icon {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    margin-left: 5px;
+}
+
+.sort-asc .sort-icon::before {
+    content: "\f145"; /* bi-arrow-up */
+    opacity: 1;
+}
+
+.sort-desc .sort-icon::before {
+    content: "\f149"; /* bi-arrow-down */
+    opacity: 1;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.getElementById('eventsTable');
+    if (!table) return;
+    
+    const sortableHeaders = table.querySelectorAll('.sortable');
+    let currentSort = { column: -1, direction: 'asc' };
+    
+    // Add click event listeners to sortable headers
+    sortableHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+            const column = parseInt(this.getAttribute('data-column'));
+            
+            // Determine sort direction
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.direction = 'asc';
+            }
+            currentSort.column = column;
+            
+            // Update header icons
+            updateHeaderIcons(column, currentSort.direction);
+            
+            // Sort the table
+            sortTable(column, currentSort.direction);
+        });
+    });
+    
+    function updateHeaderIcons(activeColumn, direction) {
+        sortableHeaders.forEach((header, index) => {
+            const icon = header.querySelector('.sort-icon');
+            header.classList.remove('sort-asc', 'sort-desc');
+            
+            if (index === activeColumn) {
+                header.classList.add(`sort-${direction}`);
+            }
+        });
+    }
+    
+    function sortTable(column, direction) {
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        
+        rows.sort((a, b) => {
+            const aCell = a.children[column];
+            const bCell = b.children[column];
+            
+            // Get sort value from data-sort attribute or text content
+            const aValue = aCell.getAttribute('data-sort') || aCell.textContent.trim();
+            const bValue = bCell.getAttribute('data-sort') || bCell.textContent.trim();
+            
+            let comparison = 0;
+            
+            // Handle different data types
+            if (column === 0) {
+                // Time column - sort by timestamp
+                comparison = new Date(aValue).getTime() - new Date(bValue).getTime();
+            } else if (column === 4) {
+                // Count column - sort numerically
+                comparison = parseInt(aValue) - parseInt(bValue);
+            } else if (column === 2) {
+                // Severity column - custom order
+                const severityOrder = { 'critical': 4, 'warning': 3, 'normal': 2, 'info': 1 };
+                const aSeverity = severityOrder[aValue.toLowerCase()] || 0;
+                const bSeverity = severityOrder[bValue.toLowerCase()] || 0;
+                comparison = aSeverity - bSeverity;
+            } else {
+                // Text columns - alphabetical sort
+                comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
+            }
+            
+            return direction === 'asc' ? comparison : -comparison;
+        });
+        
+        // Clear tbody and append sorted rows
+        tbody.innerHTML = '';
+        rows.forEach(row => tbody.appendChild(row));
+    }
+    
+    // Default sort by time (most recent first)
+    setTimeout(() => {
+        sortableHeaders[0].click(); // Click time column
+        setTimeout(() => {
+            if (currentSort.direction === 'asc') {
+                sortableHeaders[0].click(); // Click again to get desc order
+            }
+        }, 10);
+    }, 100);
+});
+</script>
+{% endblock %}

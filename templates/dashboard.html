@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - EKS Advisor{% endblock %}
+
+{% block content %}
+<!-- Enhanced Cluster Header -->
+<div class="row mb-4">
+    <div class="col">
+        <div class="d-flex align-items-center mb-3">
+            <div class="me-3">
+                <i class="bi bi-speedometer2 text-primary" style="font-size: 2.5rem;"></i>
+            </div>
+            <div>
+                <h1 class="h2 mb-1">Cluster Dashboard</h1>
+                <div class="cluster-name-badge">
+                    <span class="badge bg-primary fs-5 px-3 py-2">
+                        <i class="bi bi-kubernetes me-2"></i>
+                        {{ cluster_overview.cluster_name }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        <p class="text-muted mb-0">
+            <i class="bi bi-clock"></i> Last updated: {{ last_update }}
+        </p>
+    </div>
+</div>
+
+<!-- Cluster Overview -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-info-circle"></i>
+                    Cluster Information
+                </h5>
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <div class="cluster-info-highlight p-3 bg-light rounded">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-server text-primary me-3" style="font-size: 2rem;"></i>
+                                <div>
+                                    <h4 class="mb-1 text-primary">{{ cluster_overview.cluster_name }}</h4>
+                                    <p class="mb-0 text-muted">
+                                        <i class="bi bi-link-45deg"></i>
+                                        {{ cluster_overview.cluster_context[:50] }}{% if cluster_overview.cluster_context|length > 50 %}...{% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong><i class="bi bi-hdd-stack"></i> Nodes:</strong> {{ cluster_overview.node_count }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong><i class="bi bi-folder2-open"></i> Namespaces:</strong> {{ cluster_overview.namespace_count }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Cluster Health</h5>
+                <div class="metric-icon">
+                    {% if cluster_overview.health_color == 'success' %}
+                        <i class="bi bi-check-circle-fill text-success"></i>
+                    {% else %}
+                        <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                    {% endif %}
+                </div>
+                <h4 class="text-{{ cluster_overview.health_color }}">
+                    {{ cluster_overview.health_status }}
+                </h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Metrics Cards -->
+{% if metrics_cards %}
+<div class="row mb-4">
+    {% for card in metrics_cards %}
+    <div class="col-md-3 mb-3">
+        <div class="card metric-card h-100">
+            <div class="card-body">
+                <div class="metric-icon">{{ card.icon }}</div>
+                <div class="metric-value text-{{ card.color }}">{{ card.value }}</div>
+                <h6 class="card-title">{{ card.title }}</h6>
+                <p class="card-text text-muted small">{{ card.description }}</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Event Summary -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-bar-chart"></i>
+                    Event Summary
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <h3 class="text-info">{{ cluster_overview.total_events }}</h3>
+                        <p class="text-muted">Total Events</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h3 class="text-warning">{{ cluster_overview.warning_events }}</h3>
+                        <p class="text-muted">Warning Events</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h3 class="text-danger">{{ cluster_overview.critical_events }}</h3>
+                        <p class="text-muted">Critical Events</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Issues Status
+                </h5>
+            </div>
+            <div class="card-body text-center">
+                {% if cluster_overview.problem_count == 0 %}
+                    <div class="metric-icon text-success">
+                        <i class="bi bi-check-circle-fill"></i>
+                    </div>
+                    <h4 class="text-success">No Issues</h4>
+                    <p class="text-muted">All systems operational</p>
+                {% else %}
+                    <div class="metric-icon text-warning">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                    <h4 class="text-warning">{{ cluster_overview.problem_count }} Issues</h4>
+                    <p class="text-muted">Require attention</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Issues -->
+{% if problem_events %}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-list-task"></i>
+                    Top Priority Issues
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for event in problem_events[:5] %}
+                <div class="row mb-3 pb-3 {% if not loop.last %}border-bottom{% endif %}">
+                    <div class="col-md-1 text-center">
+                        <span class="badge bg-{{ event.severity_color }} fs-6">
+                            {{ event.severity_icon }}
+                        </span>
+                    </div>
+                    <div class="col-md-8">
+                        <h6 class="mb-1">{{ event.friendly_reason }}</h6>
+                        <p class="text-muted mb-1">
+                            <small>
+                                <i class="bi bi-box"></i> {{ event.object_kind }}/{{ event.object_name }}
+                                {% if event.namespace != 'N/A' %}
+                                    • <i class="bi bi-folder"></i> {{ event.namespace }}
+                                {% endif %}
+                            </small>
+                        </p>
+                        <p class="mb-0 small">{{ event.message }}</p>
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <span class="badge bg-secondary">{{ event.count }} occurrences</span>
+                        <br>
+                        <small class="text-muted">{{ event.timestamp }}</small>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                {% if problem_events|length > 5 %}
+                <div class="text-center">
+                    <a href="/events" class="btn btn-outline-primary">
+                        View All {{ problem_events|length }} Issues
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Quick Actions -->
+<div class="row mt-4">
+    <div class="col text-center">
+        <a href="/events" class="btn btn-primary me-2">
+            <i class="bi bi-list-ul"></i>
+            View All Events
+        </a>
+        <a href="/analysis" class="btn btn-success me-2">
+            <i class="bi bi-brain"></i>
+            Detailed Analysis
+        </a>
+        <a href="/history" class="btn btn-info me-2">
+            <i class="bi bi-graph-up"></i>
+            View History
+        </a>
+        <button class="btn btn-outline-secondary" onclick="refreshData(true)">
+            <i class="bi bi-arrow-clockwise"></i>
+            Refresh Data
+        </button>
+    </div>
+</div>
+
+{% endblock %}
